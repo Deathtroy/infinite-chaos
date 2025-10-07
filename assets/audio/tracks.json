@@ -1,0 +1,18 @@
+{
+  "tracks": [
+    {
+      "id": "1",
+      "title": "Crowd indoors bar",
+      "category": "ambience",
+      "fileName": "crowd-indoors-bar.mp3",
+      "duration": "0:57"
+    },
+    {
+      "id": "2",
+      "title": "Metal pieces dropping",
+      "category": "fx",
+      "fileName": "metal-pieces-dropping.mp3",
+      "duration": "0:13"
+    }
+  ]
+}
