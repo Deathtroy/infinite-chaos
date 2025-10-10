@@ -1,9 +1,11 @@
+import 'media_kit_stub.dart' if (dart.library.io) 'media_kit_impl.dart';
 import 'package:flutter/material.dart';
 import 'screens/music_search_screen.dart';
 import 'screens/mix_screen.dart';
 import 'screens/sound_effects_screen.dart';
 
 void main() {
+  initMediaKit();
   runApp(const MainApp());
 }
 
