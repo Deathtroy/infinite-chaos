@@ -130,22 +130,23 @@ class _PlayerWidgetState extends State<PlayerWidget> {
                 ),
                 // Display play/pause button and volume/speed sliders.
                 ControlButtons(_audioPlayer),
-                // Display seek bar. Using StreamBuilder, this widget rebuilds
-                // each time the position, buffered position or duration changes.
-                StreamBuilder<PositionData>(
-                  stream: _positionDataStream,
-                  builder: (context, snapshot) {
-                    final positionData = snapshot.data;
-                    return SeekBar(
-                      duration: positionData?.duration ?? Duration.zero,
-                      position: positionData?.position ?? Duration.zero,
-                      bufferedPosition:
-                          positionData?.bufferedPosition ?? Duration.zero,
-                      onChangeEnd: _audioPlayer.seek,
-                    );
-                  },
-                ),
               ],
+            ),
+            const SizedBox(height: 8),
+            // Display seek bar. Using StreamBuilder, this widget rebuilds
+            // each time the position, buffered position or duration changes.
+            StreamBuilder<PositionData>(
+              stream: _positionDataStream,
+              builder: (context, snapshot) {
+                final positionData = snapshot.data;
+                return SeekBar(
+                  duration: positionData?.duration ?? Duration.zero,
+                  position: positionData?.position ?? Duration.zero,
+                  bufferedPosition:
+                      positionData?.bufferedPosition ?? Duration.zero,
+                  onChangeEnd: _audioPlayer.seek,
+                );
+              },
             ),
           ],
         ),
