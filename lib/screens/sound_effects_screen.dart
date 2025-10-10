@@ -31,12 +31,6 @@ class SoundEffectsScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text('Effect ${index + 1}'),
                   const SizedBox(height: 4),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Add to mix functionality
-                    },
-                    child: const Text('Add to Mix'),
-                  ),
                 ],
               ),
             ),

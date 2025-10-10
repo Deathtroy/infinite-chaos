@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/music_track.dart';
 import '../repositories/music_repository.dart';
-import '../widgets/player_widget.dart';
+import '../providers/player_provider.dart';
 
 class MusicSearchScreen extends StatefulWidget {
   const MusicSearchScreen({super.key});
@@ -15,7 +16,6 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
   List<MusicTrack> _tracks = [];
   List<MusicTrack> _filteredTracks = [];
   String _searchQuery = '';
-  MusicTrack? _selectedTrack;
 
   @override
   void initState() {
@@ -47,60 +47,56 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
     });
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TextField(
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Search music...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            setState(() {
-                              _searchQuery = '';
-                              _filteredTracks = List.from(_tracks);
-                            });
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          TextField(
+            onChanged: _onSearchChanged,
+            decoration: InputDecoration(
+              hintText: 'Search music...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() {
+                          _searchQuery = '';
+                          _filteredTracks = List.from(_tracks);
+                        });
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: _tracks.isEmpty
-                    ? const Center(
-                        child: CircularProgressIndicator(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _tracks.isEmpty
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : _filteredTracks.isEmpty
+                    ? Center(
+                        child: Text(
+                          _searchQuery.isEmpty
+                              ? 'No tracks available'
+                              : 'No tracks matching "$_searchQuery"',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
                       )
-                    : _filteredTracks.isEmpty
-                        ? Center(
-                            child: Text(
-                              _searchQuery.isEmpty
-                                  ? 'No tracks available'
-                                  : 'No tracks matching "$_searchQuery"',
-                              style: Theme.of(context).textTheme.bodyLarge,
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: EdgeInsets.only(
-                              bottom: _selectedTrack != null ? 100 : 16
-                            ),
+                    : Consumer<PlayerProvider>(
+                        builder: (context, playerProvider, child) {
+                          return ListView.builder(
+                            padding: const EdgeInsets.only(bottom: 16),
                             itemCount: _filteredTracks.length,
                             itemBuilder: (context, index) {
                               final track = _filteredTracks[index];
-                              final isSelected = _selectedTrack?.id == track.id;
+                              final isSelected = playerProvider.currentTrack?.id == track.id;
                 
                               return Card(
                                 elevation: isSelected ? 4 : 1,
@@ -109,9 +105,7 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
                                     : null,
                                 child: InkWell(
                                   onTap: () {
-                                    setState(() {
-                                      _selectedTrack = track;
-                                    });
+                                    playerProvider.playTrack(track);
                                   },
                                   child: ListTile(
                                     leading: Icon(
@@ -138,24 +132,12 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
                                 ),
                               );
                             },
-                          ),
-              ),
-            ],
+                          );
+                        },
+                      ),
           ),
-        ),
-        if (_selectedTrack != null)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: PlayerWidget(
-              currentTrack: _selectedTrack,
-              onStop: () {
-                setState(() => _selectedTrack = null);
-              },
-            ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

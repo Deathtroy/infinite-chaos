@@ -1,12 +1,20 @@
 import 'media_kit_stub.dart' if (dart.library.io) 'media_kit_impl.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'screens/music_search_screen.dart';
 import 'screens/mix_screen.dart';
 import 'screens/sound_effects_screen.dart';
+import 'widgets/player_widget.dart';
+import 'providers/player_provider.dart';
 
 void main() {
   initMediaKit();
-  runApp(const MainApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => PlayerProvider(),
+      child: const MainApp(),
+    ),
+  );
 }
 
 class MainApp extends StatelessWidget {
@@ -47,7 +55,22 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Music Mixer'),
       ),
-      body: _screens[_selectedIndex],
+      body: Column(
+        children: [
+          Expanded(
+            child: _screens[_selectedIndex],
+          ),
+          Consumer<PlayerProvider>(
+            builder: (context, playerProvider, child) {
+              if (playerProvider.currentTrack == null) return const SizedBox.shrink();
+              return PlayerWidget(
+                currentTrack: playerProvider.currentTrack,
+                onStop: playerProvider.stopPlayback,
+              );
+            },
+          ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
