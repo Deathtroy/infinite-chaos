@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../models/music_track.dart';
+import '../models/mix.dart';
 import '../repositories/music_repository.dart';
 import '../providers/player_provider.dart';
 
@@ -104,10 +106,35 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
                                     ? Theme.of(context).colorScheme.primaryContainer
                                     : null,
                                 child: InkWell(
-                                  onTap: () {
-                                    playerProvider.playTrack(track);
-                                  },
+                                  onTap: () => playerProvider.playTrack(track),
                                   child: ListTile(
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.add),
+                                      tooltip: 'Add to mix',
+                                      onPressed: () async {
+                                        final box = await Hive.openBox<Mix>('mix');
+                                        final mix = box.get('current') ?? Mix();
+                                        
+                                        if (!mix.isFull) {
+                                          mix.tracks.add(TrackVolume(track: track));
+                                          await box.put('current', mix);
+                                          
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Added "${track.title}" to mix'),
+                                              duration: const Duration(seconds: 2),
+                                            ),
+                                          );
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Mix is full (maximum 4 tracks)'),
+                                              duration: Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
                                     leading: Icon(
                                       isSelected ? Icons.music_note : Icons.music_note_outlined,
                                       color: isSelected 

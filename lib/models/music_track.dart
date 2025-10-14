@@ -1,11 +1,25 @@
+import 'package:hive/hive.dart';
+
+part 'music_track.g.dart';
+
+@HiveType(typeId: 2)
 class MusicTrack {
+  @HiveField(0)
   final String id;
+  
+  @HiveField(1)
   final String title;
+  
+  @HiveField(2)
   final String category;
+  
+  @HiveField(3)
   final String fileName;
+  
+  @HiveField(4)
   final String duration;
 
-  const MusicTrack({
+  MusicTrack({
     required this.id,
     required this.title,
     required this.category,
