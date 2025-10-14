@@ -77,20 +77,40 @@ class _MixScreenState extends State<MixScreen> {
   }
 
   Future<void> _togglePlayback() async {
-    if (_isPlaying) {
-      for (var player in _players.values) {
-        await player.stop();
-      }
-    } else {
-      for (var player in _players.values) {
-        await player.seek(Duration.zero);
-        await player.play();
-      }
-    }
+  if (!mounted) return;
+
+  try {
     setState(() {
+      // Update state immediately for better UI feedback
       _isPlaying = !_isPlaying;
     });
+
+    if (!_isPlaying) {
+      // We're stopping
+      await Future.wait(
+        _players.values.map((player) => player.stop()),
+      );
+    } else {
+      // We're starting
+      // First seek all players to start
+      await Future.wait(
+        _players.values.map((player) => player.seek(Duration.zero)),
+      );
+      // Then play all players
+      await Future.wait(
+        _players.values.map((player) => player.play()),
+      );
+    }
+  } catch (e) {
+    if (!mounted) return;
+    setState(() {
+      _isPlaying = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error playing mix: ${e.toString()}')),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {

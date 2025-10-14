@@ -18,11 +18,24 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
   List<MusicTrack> _tracks = [];
   List<MusicTrack> _filteredTracks = [];
   String _searchQuery = '';
+  bool _isBoxReady = false; 
 
   @override
   void initState() {
     super.initState();
+    _initBox();
     _loadTracks();
+  }
+
+  Future<void> _initBox() async {
+    if (!Hive.isBoxOpen('mix')) {
+      await Hive.openBox<Mix>('mix');
+    }
+    if (mounted) {
+      setState(() {
+        _isBoxReady = true;
+      });
+    }
   }
 
   Future<void> _loadTracks() async {
@@ -78,7 +91,7 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: _tracks.isEmpty
+            child: !_isBoxReady || _tracks.isEmpty
                 ? const Center(
                     child: CircularProgressIndicator(),
                   )
@@ -108,31 +121,44 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
                                 child: InkWell(
                                   onTap: () => playerProvider.playTrack(track),
                                   child: ListTile(
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.add),
-                                      tooltip: 'Add to mix',
-                                      onPressed: () async {
-                                        final box = await Hive.openBox<Mix>('mix');
+                                    trailing: ValueListenableBuilder<Box<Mix>>(
+                                      valueListenable: Hive.box<Mix>('mix').listenable(),
+                                      builder: (context, box, child) {
                                         final mix = box.get('current') ?? Mix();
+                                        final isInMix = mix.tracks.any((t) => t.track.id == track.id);
                                         
-                                        if (!mix.isFull) {
-                                          mix.tracks.add(TrackVolume(track: track));
-                                          await box.put('current', mix);
-                                          
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Added "${track.title}" to mix'),
-                                              duration: const Duration(seconds: 2),
-                                            ),
-                                          );
-                                        } else {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Mix is full (maximum 4 tracks)'),
-                                              duration: Duration(seconds: 2),
-                                            ),
+                                        // Only show the add button if the track is not in the mix
+                                        if (!isInMix) {
+                                          return IconButton(
+                                            icon: const Icon(Icons.add),
+                                            tooltip: 'Add to mix',
+                                            onPressed: () async {
+                                              if (!mix.isFull) {
+                                                mix.tracks.add(TrackVolume(track: track));
+                                                await box.put('current', mix);
+                                                
+                                                if (!context.mounted) return;
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Added "${track.title}" to mix'),
+                                                    duration: const Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              } else {
+                                                if (!context.mounted) return;
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('Mix is full (maximum 4 tracks)'),
+                                                    duration: Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              }
+                                            },
                                           );
                                         }
+                                        
+                                        // Return null when track is in mix to hide the button
+                                        return SizedBox();
                                       },
                                     ),
                                     leading: Icon(
@@ -141,20 +167,8 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
                                           ? Theme.of(context).colorScheme.primary
                                           : null,
                                     ),
-                                    title: Text(
-                                      track.title,
-                                      style: TextStyle(
-                                        fontWeight: isSelected ? FontWeight.bold : null,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      '${track.category} • ${track.duration}',
-                                      style: TextStyle(
-                                        color: isSelected 
-                                            ? Theme.of(context).colorScheme.primary
-                                            : null,
-                                      ),
-                                    ),
+                                    title: Text(track.title),
+                                    subtitle: Text(track.category),
                                   ),
                                 ),
                               );
