@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:infinite_chaos/services/mix_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/mix.dart';
@@ -12,20 +13,28 @@ class MixScreen extends StatefulWidget {
 
 class _MixScreenState extends State<MixScreen> {
   Mix? _mix;
-  final Map<String, AudioPlayer> _players = {};
+  final _mixService = MixService();
   bool _isPlaying = false;
 
   @override
   void initState() {
     super.initState();
     _loadMix();
+    // Listen to mix service state changes
+    _mixService.addListener(_updatePlaybackState);
+  }
+
+  void _updatePlaybackState() {
+    if (mounted) {
+      setState(() {
+        _isPlaying = _mixService.isPlaying;
+      });
+    }
   }
 
   @override
   void dispose() {
-    for (var player in _players.values) {
-      player.dispose();
-    }
+    _mixService.removeListener(_updatePlaybackState);
     super.dispose();
   }
 
@@ -36,12 +45,8 @@ class _MixScreenState extends State<MixScreen> {
       _mix = mix ?? Mix();
     });
 
-    // Initialize players for each track
-    for (var track in _mix?.tracks ?? []) {
-      final player = AudioPlayer();
-      await player.setAsset('assets/audio/${track.track.fileName}');
-      await player.setVolume(track.volume);
-      _players[track.track.id] = player;
+    if (_mix != null && _mix!.tracks.isNotEmpty) {
+      await _mixService.initializeMix(_mix!);
     }
   }
 
@@ -58,7 +63,7 @@ class _MixScreenState extends State<MixScreen> {
       setState(() {
         _mix!.tracks[trackIndex].volume = volume;
       });
-      await _players[trackId]?.setVolume(volume);
+      await _mixService.updateVolume(trackId, volume);
       await _saveMix();
     }
   }
@@ -66,8 +71,7 @@ class _MixScreenState extends State<MixScreen> {
   Future<void> _removeTrack(String trackId) async {
     final trackIndex = _mix?.tracks.indexWhere((t) => t.track.id == trackId) ?? -1;
     if (trackIndex != -1) {
-      await _players[trackId]?.dispose();
-      _players.remove(trackId);
+      await _mixService.removeTrack(trackId);
       
       setState(() {
         _mix!.tracks.removeAt(trackIndex);
@@ -77,40 +81,16 @@ class _MixScreenState extends State<MixScreen> {
   }
 
   Future<void> _togglePlayback() async {
-  if (!mounted) return;
-
-  try {
-    setState(() {
-      // Update state immediately for better UI feedback
-      _isPlaying = !_isPlaying;
-    });
-
-    if (!_isPlaying) {
-      // We're stopping
-      await Future.wait(
-        _players.values.map((player) => player.stop()),
-      );
-    } else {
-      // We're starting
-      // First seek all players to start
-      await Future.wait(
-        _players.values.map((player) => player.seek(Duration.zero)),
-      );
-      // Then play all players
-      await Future.wait(
-        _players.values.map((player) => player.play()),
+    try {
+      await _mixService.togglePlayback();
+      setState(() {}); // Trigger rebuild to update UI
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error playing mix: ${e.toString()}')),
       );
     }
-  } catch (e) {
-    if (!mounted) return;
-    setState(() {
-      _isPlaying = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error playing mix: ${e.toString()}')),
-    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
