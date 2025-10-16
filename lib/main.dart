@@ -1,12 +1,9 @@
 import 'media_kit_stub.dart' if (dart.library.io) 'media_kit_impl.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'screens/music_search_screen.dart';
 import 'screens/mix_screen.dart';
 import 'screens/sound_effects_screen.dart';
-import 'widgets/player_widget.dart';
-import 'providers/player_provider.dart';
 import 'models/mix.dart';
 import 'models/music_track.dart';
 
@@ -19,12 +16,7 @@ void main() async {
   Hive.registerAdapter(TrackVolumeAdapter());
   Hive.registerAdapter(MusicTrackAdapter());
   
-  runApp(
-    ChangeNotifierProvider(
-      create: (context) => PlayerProvider(),
-      child: const MainApp(),
-    ),
-  );
+  runApp(const MainApp());
 }
 
 class MainApp extends StatelessWidget {
@@ -65,22 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Infinite Chaos'),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: _screens[_selectedIndex],
-          ),
-          Consumer<PlayerProvider>(
-            builder: (context, playerProvider, child) {
-              if (playerProvider.currentTrack == null) return const SizedBox.shrink();
-              return PlayerWidget(
-                currentTrack: playerProvider.currentTrack,
-                onStop: playerProvider.stopPlayback,
-              );
-            },
-          ),
-        ],
-      ),
+      body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) {
