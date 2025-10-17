@@ -4,6 +4,7 @@ import '../models/music_track.dart';
 import '../models/mix.dart';
 import '../repositories/music_repository.dart';
 import '../widgets/player_widget.dart';
+import '../widgets/add_track_button.dart';
 
 class MusicSearchScreen extends StatefulWidget {
   const MusicSearchScreen({super.key});
@@ -17,6 +18,7 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
   List<MusicTrack> _tracks = [];
   List<MusicTrack> _filteredTracks = [];
   String _searchQuery = '';
+  String? _selectedCategory;
   bool _isBoxReady = false;
   MusicTrack? _selectedTrack;
 
@@ -46,19 +48,26 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
     });
   }
 
+  void _filterTracks() {
+    setState(() {
+      _filteredTracks = _tracks.where((track) {
+        final title = track.title.toLowerCase();
+        final category = track.category.toLowerCase();
+        final searchLower = _searchQuery.toLowerCase();
+        final matchesSearch = _searchQuery.isEmpty || 
+          title.contains(searchLower) || 
+          category.contains(searchLower);
+        final matchesCategory = _selectedCategory == null || 
+          track.category == _selectedCategory;
+        return matchesSearch && matchesCategory;
+      }).toList();
+    });
+  }
+
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query.trim();
-      if (_searchQuery.isEmpty) {
-        _filteredTracks = List.from(_tracks);
-      } else {
-        _filteredTracks = _tracks.where((track) {
-          final title = track.title.toLowerCase();
-          final category = track.category.toLowerCase();
-          final searchLower = _searchQuery.toLowerCase();
-          return title.contains(searchLower) || category.contains(searchLower);
-        }).toList();
-      }
+      _filterTracks();
     });
   }
 
@@ -70,28 +79,57 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              TextField(
-            onChanged: _onSearchChanged,
-            decoration: InputDecoration(
-              hintText: 'Search music...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        setState(() {
-                          _searchQuery = '';
-                          _filteredTracks = List.from(_tracks);
-                        });
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        hintText: 'Search music...',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    _searchQuery = '';
+                                    _filteredTracks = List.from(_tracks);
+                                  });
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  DropdownButton<String>(
+                    value: _selectedCategory,
+                    hint: const Text('All'),
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('All'),
+                      ),
+                      ...{'fx', 'ambience'}.map((category) => 
+                        DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(category),
+                        ),
+                      ),
+                    ],
+                    onChanged: (category) {
+                      setState(() {
+                        _selectedCategory = category;
+                        _filterTracks();
+                      });
+                    },
+                  ),
+                ],
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
+              const SizedBox(height: 16),
           Expanded(
             child: !_isBoxReady || _tracks.isEmpty
                 ? const Center(
@@ -125,45 +163,8 @@ class _MusicSearchScreenState extends State<MusicSearchScreen> {
                                     });
                                   },
                                   child: ListTile(
-                                    trailing: ValueListenableBuilder<Box<Mix>>(
-                                      valueListenable: Hive.box<Mix>('mix').listenable(),
-                                      builder: (context, box, child) {
-                                        final mix = box.get('current') ?? Mix();
-                                        final isInMix = mix.tracks.any((t) => t.track.id == track.id);
-                                        
-                                        // Only show the add button if the track is not in the mix
-                                        if (!isInMix) {
-                                          return IconButton(
-                                            icon: const Icon(Icons.add),
-                                            tooltip: 'Add to mix',
-                                            onPressed: () async {
-                                              if (!mix.isFull) {
-                                                mix.tracks.add(TrackVolume(track: track));
-                                                await box.put('current', mix);
-                                                
-                                                if (!context.mounted) return;
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Added "${track.title}" to mix'),
-                                                    duration: const Duration(seconds: 2),
-                                                  ),
-                                                );
-                                              } else {
-                                                if (!context.mounted) return;
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('Mix is full (maximum 4 tracks)'),
-                                                    duration: Duration(seconds: 2),
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                          );
-                                        }
-                                        
-                                        // Return null when track is in mix to hide the button
-                                        return SizedBox();
-                                      },
+                                    trailing: AddTrackButton(
+                                      track: track,
                                     ),
                                     leading: Icon(
                                       isSelected ? Icons.music_note : Icons.music_note_outlined,

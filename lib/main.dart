@@ -12,9 +12,13 @@ void main() async {
   initMediaKit();
   
   await Hive.initFlutter();
-  Hive.registerAdapter(MixAdapter());
-  Hive.registerAdapter(TrackVolumeAdapter());
+  
   Hive.registerAdapter(MusicTrackAdapter());
+  Hive.registerAdapter(TrackVolumeAdapter());
+  Hive.registerAdapter(MixAdapter());
+
+  await Hive.openBox<Mix>('mix');
+  await Hive.openBox<MusicTrack>('effects');
   
   runApp(const MainApp());
 }

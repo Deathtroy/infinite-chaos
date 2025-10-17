@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:infinite_chaos/services/mix_service.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/mix.dart';
 
